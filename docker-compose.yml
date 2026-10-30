@@ -1,0 +1,35 @@
+services:
+  log-service:
+    build:
+      context: .
+      args:
+        SERVICE: log-service
+    environment:
+      PORT: 4001
+      INTERNAL_TOKEN: internal-secret
+    # No published ports: only the proxy can reach it on the internal network.
+
+  proxy-service:
+    build:
+      context: .
+      args:
+        SERVICE: proxy-service
+    environment:
+      PORT: 4000
+      LOG_SERVICE_URL: http://log-service:4001
+      INTERNAL_TOKEN: internal-secret
+    ports:
+      - "4000:4000"
+    depends_on:
+      - log-service
+
+  producer-simulator:
+    build:
+      context: .
+      args:
+        SERVICE: producer-simulator
+    environment:
+      PROXY_URL: http://proxy-service:4000
+    depends_on:
+      - proxy-service
+    profiles: ["simulator"]
