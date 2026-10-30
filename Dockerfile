@@ -1,9 +1,13 @@
-# Build with: docker build --build-arg SERVICE=log-service -t log-service .
-FROM node:22-alpine
-ARG SERVICE
-ENV SERVICE=${SERVICE}
+FROM maven:3.9-eclipse-temurin-17 AS build
+WORKDIR /build
+COPY pom.xml .
+RUN mvn -q -B dependency:go-offline
+COPY src ./src
+RUN mvn -q -B -DskipTests package
+
+FROM eclipse-temurin:17-jre
 WORKDIR /app
-COPY package.json ./
-COPY services ./services
-RUN npm install --omit=dev --workspaces --include-workspace-root=false
-CMD node services/${SERVICE}/src/index.js
+COPY --from=build /build/target/app.jar app.jar
+ENV JAVA_TOOL_OPTIONS="-Xmx384m"
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]
